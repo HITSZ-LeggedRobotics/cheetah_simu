@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="world_name" default="worlds/empty.world"/>
+  
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <!--<arg name="world_name" value="$(find cheetah_gazebo)/worlds/cheetah.world"/>-->
+    <arg name="world_name" value="worlds/empty.world"/>
+	<arg name="paused" value="true"/>
+	<arg name="gui" default="true"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="headless" default="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <!-- Load the URDF into the ROS Parameter Server -->
+  <param name="robot_description"
+    command="$(find xacro)/xacro --inorder '$(find cheetah_description)/urdf/cheetah.urdf'" />
+
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
+   args="
+   -pause
+   -urdf
+   -param robot_description 
+   -x 0.9 
+   -y 0.5 
+   -z 0.55 
+   -model cheetah" 
+   output="screen" /> 
+
+  <!-- Load joint controller configurations from YAML file to parameter server -->
+  <rosparam file="$(find cheetah_control)/config/cheetah_control.yaml" command="load"/>
+
+  <!-- load the controllers -->
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+    output="screen" ns="/cheetah" args=" LF_joint1_position_controller
+										 LF_joint2_position_controller
+										 LF_joint3_position_controller
+										 LB_joint1_position_controller
+										 LB_joint2_position_controller
+										 LB_joint3_position_controller
+										 RF_joint1_position_controller
+										 RF_joint2_position_controller
+										 RF_joint3_position_controller
+										 RB_joint1_position_controller
+										 RB_joint2_position_controller
+										 RB_joint3_position_controller
+										 joint_state_controller"/>
+
+  <!-- convert joint states to TF transforms for rviz, etc -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
+    respawn="false" output="screen">
+    <remap from="/joint_states" to="/cheetah/joint_states" />
+  </node>
+
+
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find cheetah_gazebo)/display.rviz" output="screen"/>
+
+</launch>
+
